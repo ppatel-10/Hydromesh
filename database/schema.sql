@@ -66,13 +66,13 @@ CREATE TABLE routes (
 
 -- Spatial indexes for performance
 CREATE INDEX idx_flood_reports_location ON flood_reports USING GIST (
-    ST_MakePoint(longitude, latitude)::geography
+    (ST_MakePoint(longitude, latitude)::geography)
 );
 
 CREATE INDEX idx_emergency_requests_location ON emergency_requests USING GIST (
-    ST_MakePoint(longitude, latitude)::geography
+    (ST_MakePoint(longitude, latitude)::geography)
 );
 
 CREATE INDEX idx_user_locations_location ON user_locations USING GIST (
-    ST_MakePoint(longitude, latitude)::geography
+    (ST_MakePoint(longitude, latitude)::geography)
 );
