@@ -37,6 +37,8 @@ dependencies:
   permission_handler: ^11.1.0
   image_picker: ^1.0.4
   record: ^5.0.4
+  flutter_animate: ^4.5.2
+  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:

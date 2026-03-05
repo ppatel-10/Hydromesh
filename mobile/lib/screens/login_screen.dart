@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/common/glass_card.dart';
+import '../widgets/common/neon_button.dart';
+import '../config/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,7 +57,10 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.error ?? 'Authentication failed')),
+        SnackBar(
+          content: Text(auth.error ?? 'Authentication failed'),
+          backgroundColor: AppTheme.dangerColor,
+        ),
       );
     }
   }
@@ -63,83 +70,99 @@ class _LoginScreenState extends State<LoginScreen> {
     final isLoading = Provider.of<AuthProvider>(context).isLoading;
 
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.water_drop, size: 80, color: Colors.blue),
-              const SizedBox(height: 24),
-              Text(
-                _isLogin ? 'Login to HydroMesh' : 'Create an Account',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              
-              if (!_isLogin) ...[
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              ElevatedButton(
-                onPressed: isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : Text(_isLogin ? 'LOGIN' : 'SIGN UP', style: const TextStyle(fontSize: 16)),
-              ),
-              const SizedBox(height: 16),
-              
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isLogin = !_isLogin;
-                  });
-                },
-                child: Text(
-                  _isLogin 
-                      ? 'Don\'t have an account? Sign Up' 
-                      : 'Already have an account? Login'
-                ),
-              ),
+      // Gradient background to make glassmorphism pop
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.8, -0.6),
+            radius: 1.5,
+            colors: [
+              Color(0xFF1A1A2E), // Dark purple/blue
+              AppTheme.background,
             ],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: GlassCard(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.water_drop_outlined, size: 64, color: AppTheme.primaryColor)
+                      .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                      .scaleXY(end: 1.1, duration: 1.seconds)
+                      .shimmer(duration: 2.seconds),
+                  
+                  const SizedBox(height: 24),
+                  
+                  Text(
+                    _isLogin ? 'Welcome Back' : 'Join HydroMesh',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2),
+                  
+                  const SizedBox(height: 32),
+                  
+                  if (!_isLogin) ...[
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                    ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.1),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                  ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
+                  const SizedBox(height: 16),
+                  
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                  ).animate().fadeIn(duration: 500.ms).slideX(begin: -0.1),
+                  const SizedBox(height: 32),
+                  
+                  NeonButton(
+                    text: _isLogin ? 'LOGIN' : 'SIGN UP',
+                    isLoading: isLoading,
+                    onPressed: _submit,
+                  ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
+                  
+                  const SizedBox(height: 24),
+                  
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLogin = !_isLogin;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                    ),
+                    child: Text(
+                      _isLogin 
+                          ? 'Don\'t have an account? Sign Up' 
+                          : 'Already have an account? Login'
+                    ),
+                  ).animate().fadeIn(delay: 700.ms),
+                ],
+              ),
+            ),
           ),
         ),
       ),

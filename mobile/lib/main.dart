@@ -27,7 +27,7 @@ class HydroMeshApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: AppConfig.appName,
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
         initialRoute: '/',
         onGenerateRoute: AppRoutes.generateRoute,
