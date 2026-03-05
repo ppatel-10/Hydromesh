@@ -212,6 +212,12 @@
       "languageVersion": "3.9"
     },
     {
+      "name": "flutter_animate",
+      "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/flutter_animate-4.5.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
       "name": "flutter_cache_manager",
       "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/flutter_cache_manager-3.4.1",
       "packageUri": "lib/",
@@ -234,6 +240,12 @@
       "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.33",
       "packageUri": "lib/",
       "languageVersion": "3.9"
+    },
+    {
+      "name": "flutter_shaders",
+      "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/flutter_shaders-0.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.19"
     },
     {
       "name": "flutter_svg",
@@ -294,6 +306,12 @@
       "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/glob-2.1.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "google_fonts",
+      "rootUri": "file:///Users/sakshammishra/.pub-cache/hosted/pub.dev/google_fonts-8.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "graphs",
