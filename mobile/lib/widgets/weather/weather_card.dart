@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/weather_provider.dart';
 import '../../config/theme.dart';
 import '../../config/app_config.dart';
-import 'glass_card.dart';
+import '../common/glass_card.dart';
 
 class WeatherCard extends StatefulWidget {
   const WeatherCard({super.key});
