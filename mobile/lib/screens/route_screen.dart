@@ -1,0 +1,228 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import '../config/theme.dart';
+import '../config/app_config.dart';
+import '../widgets/common/glass_card.dart';
+import '../widgets/common/neon_button.dart';
+
+class RouteScreen extends StatefulWidget {
+  const RouteScreen({super.key});
+
+  @override
+  State<RouteScreen> createState() => _RouteScreenState();
+}
+
+class _RouteScreenState extends State<RouteScreen> {
+  final MapController _mapController = MapController();
+  bool _isCalculating = false;
+  bool _routeFound = false;
+
+  void _calculateSafeRoute() {
+    setState(() => _isCalculating = true);
+    
+    // Simulate network delay for route calculation
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isCalculating = false;
+          _routeFound = true;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Stack(
+        children: [
+          // Background Map (Dark Matter)
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: LatLng(AppConfig.defaultLatitude, AppConfig.defaultLongitude),
+              initialZoom: 13.5,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
+                userAgentPackageName: 'com.hydromesh.app',
+              ),
+              if (_routeFound)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: const [
+                        LatLng(51.5074, -0.1278),
+                        LatLng(51.5120, -0.1150),
+                        LatLng(51.5150, -0.1000),
+                      ],
+                      color: AppTheme.safeColor,
+                      strokeWidth: 4.0,
+                    ),
+                  ],
+                ).animate().fadeIn(duration: 800.ms),
+              if (_routeFound)
+                MarkerLayer(
+                  markers: [
+                    const Marker(
+                      point: LatLng(51.5074, -0.1278),
+                      width: 20,
+                      height: 20,
+                      child: Icon(Icons.circle, color: AppTheme.primaryColor, size: 20),
+                    ),
+                    const Marker(
+                      point: LatLng(51.5150, -0.1000),
+                      width: 24,
+                      height: 24,
+                      child: Icon(Icons.location_on, color: AppTheme.safeColor, size: 24),
+                    ),
+                  ],
+                ).animate().fadeIn(duration: 500.ms),
+            ],
+          ),
+
+          // Top App Bar Area (Floating)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 16,
+            right: 16,
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const GlassCard(
+                    padding: EdgeInsets.all(12),
+                    borderRadius: 16,
+                    child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: GlassCard(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    borderRadius: 30,
+                    child: Text(
+                      'Safe Evacuation Routes',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ).animate().slideY(begin: -0.2).fadeIn(),
+          ),
+
+          // Bottom Route Calculation Panel
+          Positioned(
+            bottom: 24,
+            left: 16,
+            right: 16,
+            child: GlassCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceLight,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.my_location, color: AppTheme.primaryColor),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text('Current Location', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20.0, top: 4, bottom: 4),
+                    child: Container(width: 2, height: 20, color: AppTheme.surfaceLight),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceLight,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.location_city, color: AppTheme.safeColor),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text('Nearest Safe Zone (City Hall)', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  if (_routeFound) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.safeColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.safeColor.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _RouteStat(label: 'Est. Time', value: '14 min'),
+                          _RouteStat(label: 'Distance', value: '2.1 km'),
+                          _RouteStat(label: 'Status', value: 'Safe', color: AppTheme.safeColor),
+                        ],
+                      ),
+                    ).animate().fadeIn().slideY(begin: 0.2),
+                  ] else ...[
+                    NeonButton(
+                      text: 'FIND SAFE ROUTE',
+                      icon: Icons.route,
+                      isLoading: _isCalculating,
+                      onPressed: _calculateSafeRoute,
+                    ),
+                  ],
+                ],
+              ),
+            ).animate().slideY(begin: 0.2).fadeIn(delay: 200.ms),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+
+  const _RouteStat({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color ?? Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+}
