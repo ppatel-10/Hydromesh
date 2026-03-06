@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -127,7 +128,7 @@ class _NavBarItem extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: isSelected ? 4 : 0,
-                margin: const EdgeInsets.top(4),
+                margin: const EdgeInsets.only(top: 4),
                 width: 4,
                 decoration: const BoxDecoration(
                   color: AppTheme.primaryColor,

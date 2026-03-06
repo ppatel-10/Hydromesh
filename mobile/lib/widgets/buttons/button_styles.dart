@@ -51,7 +51,7 @@ class ButtonStyles {
     BoxShadow(
       color: Colors.black.withOpacity(0.5),
       blurRadius: 4,
-      offset: const Offset(inset, inset), // Note: inset logic managed in widget
+      offset: const Offset(0, 2),
     ),
   ];
 }

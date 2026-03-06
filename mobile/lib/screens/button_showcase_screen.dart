@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/theme.dart';
-import 'primary_button.dart';
-import 'secondary_button.dart';
-import 'ghost_button.dart';
-import 'icon_button.dart';
-import 'fab_button.dart';
-import 'toggle_button.dart';
-import 'destructive_button.dart';
-import 'social_button.dart';
-import 'chip_button.dart';
+import '../widgets/buttons/primary_button.dart';
+import '../widgets/buttons/secondary_button.dart';
+import '../widgets/buttons/ghost_button.dart';
+import '../widgets/buttons/icon_button.dart';
+import '../widgets/buttons/fab_button.dart';
+import '../widgets/buttons/toggle_button.dart';
+import '../widgets/buttons/destructive_button.dart';
+import '../widgets/buttons/social_button.dart';
+import '../widgets/buttons/chip_button.dart';
 
 class ButtonShowcaseScreen extends StatefulWidget {
   const ButtonShowcaseScreen({super.key});
