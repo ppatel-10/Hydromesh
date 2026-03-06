@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -24,6 +25,7 @@ class AuthProvider with ChangeNotifier {
     final saved = prefs.getString('auth_token');
     if (saved != null) {
       _token = saved;
+      ApiService.setToken(saved); // restore into HTTP client too
       notifyListeners();
     }
   }
