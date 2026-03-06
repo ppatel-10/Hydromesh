@@ -1,9 +1,7 @@
 class AppConfig {
   static const String appName = 'HydroMesh';
-  // TODO: Update to your Render.com service URL after deployment
-  // e.g. https://hydromesh-backend.onrender.com/api
-  static const String apiBaseUrl = 'https://backend-six-omega-34.vercel.app/api';
-  static const String socketUrl = 'https://backend-six-omega-34.vercel.app';
+  static const String apiBaseUrl = 'https://hydromesh-backend.onrender.com/api';
+  static const String socketUrl = 'https://hydromesh-backend.onrender.com';
   
   // Map settings
   static const double defaultLatitude = 51.5074;
