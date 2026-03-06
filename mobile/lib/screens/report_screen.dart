@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/report_provider.dart';
 import '../models/flood_report.dart';
 import '../config/app_config.dart';
@@ -19,6 +20,44 @@ class ReportScreen extends StatefulWidget {
 class _ReportScreenState extends State<ReportScreen> {
   final _descriptionController = TextEditingController();
   String _selectedLevel = 'ankle';
+  double? _currentLat;
+  double? _currentLng;
+  bool _isLocating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _isLocating = false);
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _isLocating = false);
+          return;
+        }
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _currentLat = pos.latitude;
+        _currentLng = pos.longitude;
+        _isLocating = false;
+      });
+    } catch (e) {
+      setState(() => _isLocating = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -28,8 +67,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _submitReport() async {
     final report = FloodReport(
-      latitude: AppConfig.defaultLatitude, // In real app, use GPS here
-      longitude: AppConfig.defaultLongitude,
+      latitude: _currentLat ?? AppConfig.defaultLatitude,
+      longitude: _currentLng ?? AppConfig.defaultLongitude,
       waterLevel: _selectedLevel,
       description: _descriptionController.text.trim(),
     );
@@ -73,6 +112,45 @@ class _ReportScreenState extends State<ReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // GPS Location Card
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _isLocating
+                      ? const SizedBox(
+                          width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          _currentLat != null ? Icons.location_on : Icons.location_off,
+                          color: _currentLat != null ? AppTheme.safeColor : AppTheme.textSecondary,
+                        ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _isLocating
+                          ? 'Locating your position...'
+                          : _currentLat != null
+                              ? 'GPS: ${_currentLat!.toStringAsFixed(4)}, ${_currentLng!.toStringAsFixed(4)}'
+                              : 'Location unavailable — using default',
+                      style: TextStyle(
+                        color: _currentLat != null ? Colors.white : AppTheme.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  if (_currentLat == null && !_isLocating)
+                    GestureDetector(
+                      onTap: _getLocation,
+                      child: const Icon(Icons.refresh, color: AppTheme.primaryColor, size: 20),
+                    ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1),
+
+            const SizedBox(height: 16),
+
             GlassCard(
               padding: const EdgeInsets.all(24),
               child: Column(

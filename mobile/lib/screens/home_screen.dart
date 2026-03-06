@@ -2,13 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
+import '../providers/report_provider.dart';
+import '../models/flood_report.dart';
 import '../config/theme.dart';
 import '../widgets/common/glass_card.dart';
-
 import '../widgets/weather/weather_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ReportProvider>(context, listen: false).fetchReports();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -208,50 +222,99 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildActivityList() {
-    // Placeholder for actual list data
-    return Column(
-      children: List.generate(3, (index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: GlassCard(
+    return Consumer<ReportProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        if (provider.reports.isEmpty) {
+          return GlassCard(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: const Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.check_circle_outline, color: AppTheme.safeColor),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Report Verified',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Downtown river overflow alert',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                const Text(
-                  '2h ago',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
+                Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                SizedBox(width: 12),
+                Text('No flood reports yet.', style: TextStyle(color: AppTheme.textSecondary)),
               ],
             ),
-          ).animate().fadeIn(delay: (400 + (index * 100)).ms).slideX(begin: 0.05),
+          );
+        }
+        return Column(
+          children: provider.reports.take(5).toList().asMap().entries.map((entry) {
+            final i = entry.key;
+            final report = entry.value;
+            final color = _waterLevelColor(report.waterLevel);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: color.withOpacity(0.3)),
+                      ),
+                      child: Icon(Icons.water_drop, color: color),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${report.waterLevel.toUpperCase()} Water Level',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            report.description?.isNotEmpty == true
+                                ? report.description!
+                                : 'Flood report submitted',
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      _formatTime(report.createdAt),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: (400 + (i * 100)).ms).slideX(begin: 0.05),
+            );
+          }).toList(),
         );
-      }),
+      },
     );
+  }
+
+  Color _waterLevelColor(String level) {
+    switch (level) {
+      case 'ankle': return AppTheme.safeColor;
+      case 'knee': return AppTheme.warningColor;
+      case 'waist': return Colors.orange;
+      case 'chest': return AppTheme.dangerColor;
+      case 'above_head': return AppTheme.accentColor;
+      default: return Colors.grey;
+    }
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return 'Just now';
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }

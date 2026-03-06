@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../widgets/common/glass_card.dart';
@@ -18,11 +19,41 @@ class _RouteScreenState extends State<RouteScreen> {
   final MapController _mapController = MapController();
   bool _isCalculating = false;
   bool _routeFound = false;
+  double _startLat = AppConfig.defaultLatitude;
+  double _startLng = AppConfig.defaultLongitude;
+
+  // Safe zone destination (fixed)
+  static const double _destLat = 51.5150;
+  static const double _destLng = -0.1000;
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+        if (perm == LocationPermission.denied) return;
+      }
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+      if (mounted) {
+        setState(() {
+          _startLat = pos.latitude;
+          _startLng = pos.longitude;
+        });
+        _mapController.move(LatLng(_startLat, _startLng), 13.5);
+      }
+    } catch (_) {}
+  }
 
   void _calculateSafeRoute() {
     setState(() => _isCalculating = true);
-    
-    // Simulate network delay for route calculation
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
@@ -43,7 +74,7 @@ class _RouteScreenState extends State<RouteScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: LatLng(AppConfig.defaultLatitude, AppConfig.defaultLongitude),
+              initialCenter: LatLng(_startLat, _startLng),
               initialZoom: 13.5,
             ),
             children: [
@@ -56,10 +87,10 @@ class _RouteScreenState extends State<RouteScreen> {
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: const [
-                        LatLng(51.5074, -0.1278),
-                        LatLng(51.5120, -0.1150),
-                        LatLng(51.5150, -0.1000),
+                      points: [
+                        LatLng(_startLat, _startLng),
+                        LatLng((_startLat + _destLat) / 2, (_startLng + _destLng) / 2),
+                        LatLng(_destLat, _destLng),
                       ],
                       color: AppTheme.safeColor,
                       strokeWidth: 4.0,
@@ -69,14 +100,14 @@ class _RouteScreenState extends State<RouteScreen> {
               if (_routeFound)
                 MarkerLayer(
                   markers: [
-                    const Marker(
-                      point: LatLng(51.5074, -0.1278),
+                    Marker(
+                      point: LatLng(_startLat, _startLng),
                       width: 20,
                       height: 20,
-                      child: Icon(Icons.circle, color: AppTheme.primaryColor, size: 20),
+                      child: const Icon(Icons.circle, color: AppTheme.primaryColor, size: 20),
                     ),
                     const Marker(
-                      point: LatLng(51.5150, -0.1000),
+                      point: LatLng(_destLat, _destLng),
                       width: 24,
                       height: 24,
                       child: Icon(Icons.location_on, color: AppTheme.safeColor, size: 24),

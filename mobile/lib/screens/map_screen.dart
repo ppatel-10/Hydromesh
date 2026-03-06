@@ -99,9 +99,31 @@ class _MapScreenState extends State<MapScreen> {
                 GlassCard(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   borderRadius: 30,
-                  child: const Text(
-                    'Live Flood Map',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  child: Consumer<ReportProvider>(
+                    builder: (context, provider, _) {
+                      final connected = provider.isSocketConnected;
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8, height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: connected ? AppTheme.safeColor : Colors.grey,
+                              boxShadow: [
+                                if (connected)
+                                  BoxShadow(color: AppTheme.safeColor.withOpacity(0.6), blurRadius: 6),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Live Flood Map',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2),
 

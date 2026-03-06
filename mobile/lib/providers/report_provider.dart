@@ -13,6 +13,7 @@ class ReportProvider with ChangeNotifier {
   List<FloodReport> get reports => _reports;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isSocketConnected => _socket?.connected ?? false;
 
   ReportProvider() {
     _initSocket();
