@@ -16,8 +16,9 @@ services:
         value: "*"
       - key: WEATHER_API_URL
         value: https://api.open-meteo.com/v1
-      # Set these in Render dashboard → Environment tab:
-      # DATABASE_URL = postgresql://postgres:Hydromesh%402025@db.zllbvvgufhhhktaxlpqp.supabase.co:5432/postgres
+      # Set DATABASE_URL in Render dashboard → Environment tab:
+      # USE THE POOLER URL (has IPv4, direct URL is IPv6-only):
+      # DATABASE_URL = postgresql://postgres.zllbvvgufhhhktaxlpqp:Hydromesh%402025@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
       # JWT_SECRET   = hydromesh_super_secret_key_2026
       - key: DATABASE_URL
         sync: false
