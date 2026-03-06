@@ -39,15 +39,18 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-const connectDB = async () => {
+// Retry DB connection with exponential backoff — never crashes the server.
+// Render won't restart-loop; the service stays alive and heals automatically.
+const connectDB = async (attempt = 1) => {
   try {
     const client = await pool.connect();
     console.log('✅ Connected to Supabase PostgreSQL');
     client.release();
   } catch (error) {
-    console.error('❌ Database connection error:', error.message);
-    console.error('   Hostname attempted:', error.hostname ?? '(unknown)');
-    process.exit(1);
+    const delay = Math.min(attempt * 5000, 60000); // 5s, 10s, …, max 60s
+    console.error(`❌ DB connection failed (attempt ${attempt}): ${error.message}`);
+    console.error(`   Retrying in ${delay / 1000}s…`);
+    setTimeout(() => connectDB(attempt + 1), delay);
   }
 };
 

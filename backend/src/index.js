@@ -36,16 +36,12 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use(require('./middleware/error.middleware'));
 
-// Start server
+// Start server immediately — DB connects in background with retries
 const PORT = process.env.PORT || 3000;
 
-const startServer = async () => {
-  await connectDB();
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-};
-
-startServer();
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  connectDB(); // non-blocking: retries until Supabase is reachable
+});
 
 module.exports = { app, server };
