@@ -1,7 +1,7 @@
 class AppConfig {
   static const String appName = 'HydroMesh';
-  static const String apiBaseUrl = 'https://hydromesh-backend.onrender.com/api';
-  static const String socketUrl = 'https://hydromesh-backend.onrender.com';
+  static const String apiBaseUrl = 'https://hydromesh-api.onrender.com/api';
+  static const String socketUrl = 'https://hydromesh-api.onrender.com';
   
   // Map settings
   static const double defaultLatitude = 51.5074;
