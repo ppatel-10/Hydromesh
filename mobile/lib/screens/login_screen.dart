@@ -144,6 +144,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
                   
                   const SizedBox(height: 24),
+
+                  if (_isLogin) ...[
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                           // Simulate Biometric Error
+                           HapticFeedback.heavyImpact();
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Biometric authentication failed. Try again.')),
+                           );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceLight,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: const Icon(Icons.fingerprint, color: AppTheme.primaryColor, size: 32),
+                        ),
+                      ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 2.seconds),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                   
                   TextButton(
                     onPressed: () {
