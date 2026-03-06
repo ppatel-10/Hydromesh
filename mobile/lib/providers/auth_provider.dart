@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 
@@ -14,6 +15,29 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _token != null;
   String? get error => _error;
 
+  AuthProvider() {
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('auth_token');
+    if (saved != null) {
+      _token = saved;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+  }
+
+  Future<void> _clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+  }
+
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _error = null;
@@ -25,6 +49,7 @@ class AuthProvider with ChangeNotifier {
     if (result['success']) {
       _user = result['user'];
       _token = result['token'];
+      await _saveToken(_token!);
       notifyListeners();
       return true;
     } else {
@@ -55,6 +80,7 @@ class AuthProvider with ChangeNotifier {
     if (result['success']) {
       _user = result['user'];
       _token = result['token'];
+      await _saveToken(_token!);
       notifyListeners();
       return true;
     } else {
@@ -66,6 +92,7 @@ class AuthProvider with ChangeNotifier {
 
   void logout() {
     AuthService.logout();
+    _clearToken();
     _user = null;
     _token = null;
     notifyListeners();

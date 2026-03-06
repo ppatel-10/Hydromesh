@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../widgets/common/glass_card.dart';
@@ -22,9 +23,11 @@ class _RouteScreenState extends State<RouteScreen> {
   double _startLat = AppConfig.defaultLatitude;
   double _startLng = AppConfig.defaultLongitude;
 
-  // Safe zone destination (fixed)
-  static const double _destLat = 51.5150;
-  static const double _destLng = -0.1000;
+  // Destination: nearest safe zone (set dynamically once GPS resolves)
+  double _destLat = AppConfig.defaultLatitude + 0.018; // ~2km north fallback
+  double _destLng = AppConfig.defaultLongitude;
+  String _distanceText = '--';
+  String _timeText = '--';
 
   @override
   void initState() {
@@ -46,19 +49,36 @@ class _RouteScreenState extends State<RouteScreen> {
         setState(() {
           _startLat = pos.latitude;
           _startLng = pos.longitude;
+          // Safe zone: 2km north of user's actual position
+          _destLat = pos.latitude + 0.018;
+          _destLng = pos.longitude;
         });
         _mapController.move(LatLng(_startLat, _startLng), 13.5);
       }
     } catch (_) {}
   }
 
+  double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
+    const r = 6371.0;
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLng = (lng2 - lng1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) *
+        math.sin(dLng / 2) * math.sin(dLng / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
   void _calculateSafeRoute() {
     setState(() => _isCalculating = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
+        final km = _haversineKm(_startLat, _startLng, _destLat, _destLng);
+        final mins = (km / 5.0 * 60).round(); // walking ~5 km/h
         setState(() {
           _isCalculating = false;
           _routeFound = true;
+          _distanceText = '${km.toStringAsFixed(1)} km';
+          _timeText = '$mins min';
         });
       }
     });
@@ -106,11 +126,11 @@ class _RouteScreenState extends State<RouteScreen> {
                       height: 20,
                       child: const Icon(Icons.circle, color: AppTheme.primaryColor, size: 20),
                     ),
-                    const Marker(
+                    Marker(
                       point: LatLng(_destLat, _destLng),
                       width: 24,
                       height: 24,
-                      child: Icon(Icons.location_on, color: AppTheme.safeColor, size: 24),
+                      child: const Icon(Icons.location_on, color: AppTheme.safeColor, size: 24),
                     ),
                   ],
                 ).animate().fadeIn(duration: 500.ms),
@@ -205,12 +225,12 @@ class _RouteScreenState extends State<RouteScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppTheme.safeColor.withOpacity(0.3)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _RouteStat(label: 'Est. Time', value: '14 min'),
-                          _RouteStat(label: 'Distance', value: '2.1 km'),
-                          _RouteStat(label: 'Status', value: 'Safe', color: AppTheme.safeColor),
+                          _RouteStat(label: 'Est. Time', value: _timeText),
+                          _RouteStat(label: 'Distance', value: _distanceText),
+                          const _RouteStat(label: 'Status', value: 'Safe', color: AppTheme.safeColor),
                         ],
                       ),
                     ).animate().fadeIn().slideY(begin: 0.2),

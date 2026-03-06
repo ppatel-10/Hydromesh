@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../providers/weather_provider.dart';
 import '../../config/theme.dart';
 import '../../config/app_config.dart';
@@ -17,12 +18,29 @@ class _WeatherCardState extends State<WeatherCard> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WeatherProvider>(context, listen: false).fetchWeather(
-        AppConfig.defaultLatitude,
-        AppConfig.defaultLongitude,
-      );
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchWithGps());
+  }
+
+  Future<void> _fetchWithGps() async {
+    double lat = AppConfig.defaultLatitude;
+    double lng = AppConfig.defaultLongitude;
+    try {
+      final svc = await Geolocator.isLocationServiceEnabled();
+      if (svc) {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+          final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low);
+          lat = pos.latitude;
+          lng = pos.longitude;
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      Provider.of<WeatherProvider>(context, listen: false).fetchWeather(lat, lng);
+    }
   }
 
   @override
