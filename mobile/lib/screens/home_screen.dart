@@ -9,6 +9,7 @@ import '../widgets/layout/fluid_nav_bar.dart';
 import '../widgets/buttons/expandable_fab.dart';
 import '../widgets/weather/weather_card.dart';
 import '../widgets/common/progress_ring.dart';
+import '../widgets/common/shimmer_skeleton.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -265,41 +266,57 @@ class _HomeScreenState extends State<HomeScreen> {
       children: List.generate(3, (index) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
-          child: GlassCard(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(12),
+          child: Dismissible(
+            key: Key('activity_$index'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: AppTheme.dangerColor.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Icons.delete_outline, color: Colors.white),
+            ),
+            onDismissed: (direction) {
+              // Handle dismissal (e.g. archive notification)
+            },
+            child: GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.check_circle_outline, color: AppTheme.safeColor),
                   ),
-                  child: const Icon(Icons.check_circle_outline, color: AppTheme.safeColor),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Report Verified',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Downtown river overflow alert',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                      ),
-                    ],
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Report Verified',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Downtown river overflow alert',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Text(
-                  '2h ago',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
-              ],
+                  const Text(
+                    '2h ago',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ).animate().fadeIn(delay: (400 + (index * 100)).ms).slideX(begin: 0.05),
         );
