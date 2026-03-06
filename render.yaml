@@ -16,7 +16,10 @@ services:
         value: "*"
       - key: WEATHER_API_URL
         value: https://api.open-meteo.com/v1
+      # Set these in Render dashboard → Environment tab:
+      # DATABASE_URL = postgresql://postgres:Hydromesh%402025@db.zllbvvgufhhhktaxlpqp.supabase.co:5432/postgres
+      # JWT_SECRET   = hydromesh_super_secret_key_2026
       - key: DATABASE_URL
-        value: postgresql://postgres:Hydromesh%402025@db.zllbvvgufhhhktaxlpqp.supabase.co:5432/postgres
+        sync: false
       - key: JWT_SECRET
-        value: hydromesh_super_secret_key_2026
+        sync: false
