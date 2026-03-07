@@ -1,5 +1,7 @@
 const axios = require('axios');
 
+const WEATHER_API = process.env.WEATHER_API_URL || 'https://api.open-meteo.com/v1';
+
 const weatherController = {
   // Get current weather
   async getCurrentWeather(req, res, next) {
@@ -10,7 +12,7 @@ const weatherController = {
         return res.status(400).json({ message: 'Latitude and longitude required' });
       }
 
-      const response = await axios.get(`${process.env.WEATHER_API_URL}/forecast`, {
+      const response = await axios.get(`${WEATHER_API}/forecast`, {
         params: {
           latitude,
           longitude,
@@ -34,7 +36,7 @@ const weatherController = {
         return res.status(400).json({ message: 'Latitude and longitude required' });
       }
 
-      const response = await axios.get(`${process.env.WEATHER_API_URL}/forecast`, {
+      const response = await axios.get(`${WEATHER_API}/forecast`, {
         params: {
           latitude,
           longitude,

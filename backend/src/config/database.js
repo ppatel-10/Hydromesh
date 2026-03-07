@@ -5,6 +5,15 @@ require('dotenv').config();
 // Force IPv4 DNS resolution — Render cannot reach Supabase over IPv6
 dns.setDefaultResultOrder('ipv4first');
 
+// Auto-derive SUPABASE_URL from DATABASE_URL if not explicitly set
+if (!process.env.SUPABASE_URL && process.env.DATABASE_URL) {
+  const match = process.env.DATABASE_URL.match(/([a-z0-9]+)\.supabase\.co/);
+  if (match) {
+    process.env.SUPABASE_URL = `https://${match[1]}.supabase.co`;
+    console.log(`🔗 Auto-derived SUPABASE_URL: ${process.env.SUPABASE_URL}`);
+  }
+}
+
 // Determine connection mode: Supabase REST (HTTPS/IPv4) or direct pg
 const useRest = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
 
@@ -48,17 +57,17 @@ if (!useRest) {
 // Retry DB connection with exponential backoff
 const connectDB = async (attempt = 1) => {
   if (useRest) {
-    // REST mode — test the connection via Supabase client
     const { getSupabase } = require('./supabase');
     const sb = getSupabase();
-    const { data, error } = await sb.from('users').select('user_id').limit(1);
-    if (error) {
-      console.error(`❌ Supabase REST connection test failed: ${error.message}`);
+    try {
+      const { data, error } = await sb.from('users').select('user_id').limit(1);
+      if (error) throw error;
+      console.log('✅ Connected to Supabase via REST API (HTTPS/IPv4)');
+    } catch (err) {
       const delay = Math.min(attempt * 5000, 60000);
+      console.error(`❌ Supabase REST failed (attempt ${attempt}): ${err.message}`);
       console.error(`   Retrying in ${delay / 1000}s…`);
       setTimeout(() => connectDB(attempt + 1), delay);
-    } else {
-      console.log('✅ Connected to Supabase via REST API (HTTPS/IPv4)');
     }
     return;
   }
