@@ -11,7 +11,9 @@ const { connectDB } = require('./config/database');
 dotenv.config();
 
 // Defaults for non-secret env vars
-process.env.WEATHER_API_URL = process.env.WEATHER_API_URL || 'https://api.open-meteo.com/v1';
+if (!process.env.WEATHER_API_URL || process.env.WEATHER_API_URL === '') {
+  process.env.WEATHER_API_URL = 'https://api.open-meteo.com/v1';
+}
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'hydromesh_default_secret_change_me';
 
@@ -83,6 +85,13 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.2.0',
     dbMode: useRest ? 'supabase-rest' : 'pg-direct',
+    config: {
+      weatherApi: !!process.env.WEATHER_API_URL,
+      supabaseUrl: !!process.env.SUPABASE_URL,
+      supabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
+      databaseUrl: !!process.env.DATABASE_URL,
+      jwtSecret: !!process.env.JWT_SECRET,
+    },
   });
 });
 
