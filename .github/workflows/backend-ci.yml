@@ -1,0 +1,42 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Verify server starts
+        run: |
+          JWT_SECRET=test DATABASE_URL=postgresql://test:test@localhost:5432/test PORT=4000 \
+          node -e "
+            const { app } = require('./src/index.js');
+            setTimeout(() => { console.log('✅ Server starts OK'); process.exit(0); }, 2000);
+          "

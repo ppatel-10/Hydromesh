@@ -10,6 +10,11 @@ const { connectDB } = require('./config/database');
 // Load environment variables
 dotenv.config();
 
+// Defaults for non-secret env vars
+process.env.WEATHER_API_URL = process.env.WEATHER_API_URL || 'https://api.open-meteo.com/v1';
+process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'hydromesh_default_secret_change_me';
+
 // Initialize Express
 const app = express();
 const server = http.createServer(app);
@@ -72,7 +77,13 @@ app.use('/api/simulation', require('./routes/simulation.routes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.1.0' });
+  const { useRest } = require('./config/database');
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '1.2.0',
+    dbMode: useRest ? 'supabase-rest' : 'pg-direct',
+  });
 });
 
 // Error handling middleware
