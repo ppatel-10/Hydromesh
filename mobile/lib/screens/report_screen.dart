@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
 import '../providers/report_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/flood_report.dart';
 import '../config/app_config.dart';
 import '../config/theme.dart';
@@ -66,6 +67,18 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _submitReport() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to submit a report'),
+          backgroundColor: AppTheme.warningColor,
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
     final report = FloodReport(
       latitude: _currentLat ?? AppConfig.defaultLatitude,
       longitude: _currentLng ?? AppConfig.defaultLongitude,

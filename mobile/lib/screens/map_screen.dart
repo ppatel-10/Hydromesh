@@ -51,7 +51,7 @@ class _MapScreenState extends State<MapScreen> {
                   // Dark Mode Tile Layer 
                   // (Using CartoDB Dark Matter as a placeholder for a dark map theme)
                   TileLayer(
-                    urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                    urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
                     subdomains: const ['a', 'b', 'c', 'd'],
                     userAgentPackageName: 'com.hydromesh.app',
                   ),
