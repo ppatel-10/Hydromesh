@@ -58,10 +58,20 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {'success': true, 'data': data};
       } else {
-        return {
-          'success': false,
-          'error': (data is Map ? data['message'] : null) ?? 'Server error ${response.statusCode}',
-        };
+        String errorMsg = 'Server error ${response.statusCode}';
+        if (data is Map) {
+          if (data['message'] != null) {
+            errorMsg = data['message'].toString();
+          } else if (data['errors'] is List && (data['errors'] as List).isNotEmpty) {
+            errorMsg = (data['errors'] as List)
+                .map((e) => e is Map ? e['msg'] ?? e['message'] ?? '' : e.toString())
+                .where((s) => s.toString().isNotEmpty)
+                .join(', ');
+          } else if (data['error'] != null) {
+            errorMsg = data['error'].toString();
+          }
+        }
+        return {'success': false, 'error': errorMsg};
       }
     } catch (_) {
       return {'success': false, 'error': 'Invalid server response (${response.statusCode})'};

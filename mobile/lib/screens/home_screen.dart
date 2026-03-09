@@ -100,12 +100,13 @@ class _HomeScreenState extends State<HomeScreen> {
       pinned: true,
       expandedHeight: 90,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Row(
+            Expanded(
+              child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -124,18 +125,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         '$greeting,',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: AppTheme.textSecondary,
                           fontWeight: FontWeight.w500,
+                          height: 1.1,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         name,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
+                          height: 1.1,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -143,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+            ),
             ),
             Row(
               children: [
