@@ -19,7 +19,6 @@ const weatherController = {
       console.error('Weather API error:', error.code, error.message, error.response?.status);
       res.status(502).json({
         message: 'Weather service temporarily unavailable',
-        debug: { code: error.code, msg: error.message?.substring(0, 100) },
         current_weather: { temperature: null, windspeed: null, weathercode: 0 },
       });
     }
