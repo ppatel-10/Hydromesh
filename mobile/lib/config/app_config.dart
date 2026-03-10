@@ -2,7 +2,7 @@ class AppConfig {
   static const String appName = 'HydroMesh';
 
   // Switch between: 'local', 'render', 'azure'
-  static const String _env = 'azure';
+  static const String _env = 'render';
 
   static const String _localIp = '192.168.0.170'; // your Mac's LAN IP
   static const String _localBaseUrl = 'http://$_localIp:3000/api';
