@@ -2,14 +2,14 @@ class AppConfig {
   static const String appName = 'HydroMesh';
 
   // Switch between: 'local', 'render', 'azure'
-  static const String _env = 'render';
+  static const String _env = 'azure';
 
   static const String _localIp = '192.168.0.170'; // your Mac's LAN IP
   static const String _localBaseUrl = 'http://$_localIp:3000/api';
   static const String _localSocketUrl = 'http://$_localIp:3000';
 
-  static const String _renderBaseUrl = 'https://hydromesh.onrender.com/api';
-  static const String _renderSocketUrl = 'https://hydromesh.onrender.com';
+  static const String _renderBaseUrl = 'https://hydromesh-api.onrender.com/api';
+  static const String _renderSocketUrl = 'https://hydromesh-api.onrender.com';
 
   // Azure App Service — update name after creating the app
   static const String _azureAppName = 'hydromesh-api';

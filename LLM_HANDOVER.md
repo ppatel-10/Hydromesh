@@ -44,12 +44,22 @@ This document provides a comprehensive overview of the Hydromesh project, what h
 
 ## 4. Current Deployment State
 
-### Backend — LIVE ✅
-- **URL:** `https://hydromesh-api.onrender.com`
-- **Health check:** `GET /hydromesh-api.onrender.com/api/health` → `{"status":"ok"}`
-- **Service name:** `hydromesh-api` (Render dashboard: srv-d6ledgnpm1nc739bndhg)
+### Backend — MIGRATING TO AZURE 🔄
+- **Previous host:** Render (`https://hydromesh-api.onrender.com`) — still live as fallback
+- **Target host:** Azure App Service (`https://hydromesh-api.azurewebsites.net`)
+- **GitHub Actions workflow:** `.github/workflows/azure-deploy.yml` — triggers on push to `main` (backend/*) once secrets are configured
 - **DB connection:** Retries with exponential backoff; server stays alive even if DB is down.
 - **Key fix applied:** `database.js` uses a custom URL parser (splits on LAST `@`) so passwords containing `@` work whether encoded or raw.
+
+### Azure Setup Checklist (manual steps required)
+- [ ] Create Azure App Service: portal.azure.com → Web App, name `hydromesh-api`, Node 18 LTS, Linux, Free F1, region Central India
+- [ ] Configure Application Settings in Azure: `DATABASE_URL`, `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `PORT=8080`, `NODE_ENV=production`, `CORS_ORIGIN=*`
+- [ ] Add GitHub Secret `AZURE_WEBAPP_PUBLISH_PROFILE` (from Azure portal → App Service → Get Publish Profile)
+- [ ] Add GitHub Variable `AZURE_WEBAPP_NAME=hydromesh-api`
+- [ ] Push to `main` — GitHub Actions auto-deploys
+- [ ] Verify: `curl https://hydromesh-api.azurewebsites.net/api/health`
+
+See full guide: `docs/AZURE_DEPLOY.md`
 
 ### Database — ⚠️ ACTION REQUIRED
 - **Supabase project is PAUSED** (free tier auto-pauses after 7 days inactivity).
@@ -60,12 +70,14 @@ This document provides a comprehensive overview of the Hydromesh project, what h
 ### Mobile App — APK AVAILABLE ✅
 - Download from: GitHub → Actions → "Build Android APK" → latest run → `hydromesh-release-apk` artifact
 - `applicationId`: `com.hydromesh.app`
-- All API calls point to `https://hydromesh-api.onrender.com`
+- **API calls now point to:** `https://hydromesh-api.azurewebsites.net` (switched from Render)
+- Render fallback URLs also corrected to `https://hydromesh-api.onrender.com`
 
 ---
 
 ## 5. Next Steps for the AI Assistant
-1. **Unpause Supabase** — User must restore the paused project. After that, all DB-backed API calls work.
-2. **Offline Caching (Shaazia's Feature):** Implement local SQLite / SharedPreferences caching for the map and reports so the app degrades gracefully without internet.
-3. **Route Destination Input:** RouteScreen currently sets destination to 2km north of user. Could add a text field / tap-on-map to set custom destination.
-4. **Emergency Accept/Resolve flow:** The bottom sheet on SOS markers has an "Accept" button but doesn't call `POST /emergency/:id/accept` yet — needs the auth token and request ID wired in.
+1. **Complete Azure provisioning** — Follow the checklist in Section 4 above. Once `AZURE_WEBAPP_PUBLISH_PROFILE` secret is added to GitHub, any push to `main` touching `backend/` will auto-deploy.
+2. **Unpause Supabase** — User must restore the paused project. After that, all DB-backed API calls work.
+3. **Offline Caching (Shaazia's Feature):** Implement local SQLite / SharedPreferences caching for the map and reports so the app degrades gracefully without internet.
+4. **Route Destination Input:** RouteScreen currently sets destination to 2km north of user. Could add a text field / tap-on-map to set custom destination.
+5. **Emergency Accept/Resolve flow:** The bottom sheet on SOS markers has an "Accept" button but doesn't call `POST /emergency/:id/accept` yet — needs the auth token and request ID wired in.
