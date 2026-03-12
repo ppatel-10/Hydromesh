@@ -8,8 +8,8 @@ class AppConfig {
   static const String _localBaseUrl = 'http://$_localIp:3000/api';
   static const String _localSocketUrl = 'http://$_localIp:3000';
 
-  static const String _renderBaseUrl = 'https://hydromesh.onrender.com/api';
-  static const String _renderSocketUrl = 'https://hydromesh.onrender.com';
+  static const String _renderBaseUrl = 'https://hydromesh-api.onrender.com/api';
+  static const String _renderSocketUrl = 'https://hydromesh-api.onrender.com';
 
   // Azure App Service — update name after creating the app
   static const String _azureAppName = 'hydromesh-api';
