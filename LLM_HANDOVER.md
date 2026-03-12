@@ -53,7 +53,8 @@ This document provides a comprehensive overview of the Hydromesh project, what h
 
 ### Azure Setup Checklist (manual steps required)
 - [ ] Create Azure App Service: portal.azure.com → Web App, name `hydromesh-api`, Node 18 LTS, Linux, Free F1, region Central India
-- [ ] Configure Application Settings in Azure: `DATABASE_URL`, `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `PORT=8080`, `NODE_ENV=production`, `CORS_ORIGIN=*`
+- [ ] Configure Application Settings in Azure: `DATABASE_URL`, `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `PORT=8080`, `NODE_ENV=production`, `CORS_ORIGINS=*`
+- [ ] Enable WebSockets: App Service → Configuration → General settings → Web sockets → **On** (required for Socket.io)
 - [ ] Add GitHub Secret `AZURE_WEBAPP_PUBLISH_PROFILE` (from Azure portal → App Service → Get Publish Profile)
 - [ ] Add GitHub Variable `AZURE_WEBAPP_NAME=hydromesh-api`
 - [ ] Push to `main` — GitHub Actions auto-deploys

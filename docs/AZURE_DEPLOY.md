@@ -26,13 +26,27 @@ Go to your App Service → **Configuration** → **Application settings**, add:
 | `SUPABASE_SERVICE_KEY` | (from Supabase Dashboard → Settings → API → service_role key) |
 | `PORT` | `8080` |
 | `NODE_ENV` | `production` |
-| `CORS_ORIGIN` | `*` |
+| `CORS_ORIGINS` | `*` |
 
-> **Note**: Azure App Service uses port 8080 by default on Linux.
+> **Note**: Azure App Service uses port 8080 by default on Linux. The env var is `CORS_ORIGINS` (with an S) — this matches the code in `backend/src/index.js`.
 
 Click **Save** after adding all variables.
 
-## 3. Set Up GitHub Actions Auto-Deploy
+## 3. Enable WebSockets (Required for Socket.io)
+
+> ⚠️ **This step is critical.** Without it, real-time features (live map markers, SOS alerts) will silently fail.
+
+In Azure Portal → App Service → **Configuration** → **General settings**:
+- **Web sockets**: **On**
+
+Click **Save**, then **Restart** the App Service.
+
+## 4. Configure Startup Command
+
+In Azure Portal → App Service → **Configuration** → **General settings**:
+- **Startup Command**: `cd backend && npm start`
+
+## 5. Set Up GitHub Actions Auto-Deploy
 
 ### Option A: Publish Profile (Recommended)
 
@@ -52,12 +66,7 @@ Click **Save** after adding all variables.
 5. Build provider: **GitHub Actions**
 6. Azure will auto-create the workflow
 
-## 4. Configure Startup Command
-
-In Azure Portal → App Service → **Configuration** → **General settings**:
-- **Startup Command**: `cd backend && npm start`
-
-## 5. Verify Deployment
+## 6. Verify Deployment
 
 ```bash
 curl https://hydromesh-api.azurewebsites.net/api/health
@@ -68,15 +77,32 @@ Should return:
 {"status":"ok","version":"1.4.0","dbMode":"supabase-rest"}
 ```
 
-## 6. Update Flutter App
+Test all endpoints:
+```bash
+# Auth
+curl -X POST https://hydromesh-api.azurewebsites.net/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"citizen@test.com","password":"password123"}'
 
-In `mobile/lib/config/app_config.dart`:
+# Reports (public)
+curl https://hydromesh-api.azurewebsites.net/api/reports
+
+# Weather
+curl "https://hydromesh-api.azurewebsites.net/api/weather/current?latitude=51.5074&longitude=-0.1278"
+```
+
+## 7. Update Flutter App
+
+Once health check passes, in `mobile/lib/config/app_config.dart`:
 - Set `_env = 'azure'`
-- Update `_azureAppName` if you chose a different name
+- Update `_azureAppName` if you chose a different App Service name
+
+Then push to `main` — GitHub Actions will rebuild the APK automatically.
 
 ## Troubleshooting
 
 - **502 Bad Gateway**: Check startup command is `cd backend && npm start`
 - **App not starting**: Check **Log stream** in Azure Portal for errors
 - **DB connection fails**: Ensure DATABASE_URL uses `%40` for `@` in password
-- **CORS errors**: Add your frontend domain to `CORS_ORIGIN` env var
+- **Socket.io not connecting**: Ensure WebSockets is **On** in Configuration → General settings
+- **CORS errors**: Add your frontend domain to `CORS_ORIGINS` env var (note: plural, with S)
