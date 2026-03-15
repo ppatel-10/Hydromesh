@@ -8,7 +8,7 @@
    - **Subscription**: Azure for Students
    - **Resource Group**: Create new → `hydromesh-rg`
    - **Name**: `hydromesh-api` (this becomes `hydromesh-api.azurewebsites.net`)
-   - **Runtime stack**: Node 18 LTS
+   - **Runtime stack**: Node 24 LTS
    - **OS**: Linux
    - **Region**: Central India (or closest)
    - **Pricing**: Free F1
