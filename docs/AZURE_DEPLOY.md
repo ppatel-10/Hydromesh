@@ -4,7 +4,7 @@
 
 1. Go to [portal.azure.com](https://portal.azure.com)
 2. Click **Create a resource** → **Web App**
-3. Fill in:
+3. Fill in the **Basics** tab:
    - **Subscription**: Azure for Students
    - **Resource Group**: Create new → `hydromesh-rg`
    - **Name**: `hydromesh-api` (this becomes `hydromesh-api.azurewebsites.net`)
@@ -12,7 +12,8 @@
    - **OS**: Linux
    - **Region**: Central India (or closest)
    - **Pricing**: Free F1
-4. Click **Review + Create** → **Create**
+4. On the **Deployment** tab — **skip it entirely** (leave as default). Azure does not support configuring GitHub Actions deployment during creation with Free F1 + Linux. You will set this up after the app is created.
+5. Click through to **Review + Create** → **Create**
 
 ## 2. Configure Environment Variables
 
