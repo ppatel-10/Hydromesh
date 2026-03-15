@@ -12,8 +12,9 @@
    - **OS**: Linux
    - **Region**: Central India (or closest)
    - **Pricing**: Free F1
-4. On the **Deployment** tab — **skip it entirely** (leave as default). Azure does not support configuring GitHub Actions deployment during creation with Free F1 + Linux. You will set this up after the app is created.
-5. Click through to **Review + Create** → **Create**
+4. On the **Database** tab — **skip it entirely**. Hydromesh uses Supabase (external PostgreSQL), not an Azure database. Do not create any Azure database resource.
+5. On the **Deployment** tab — **skip it entirely** (leave as default). Azure does not support configuring GitHub Actions deployment during creation with Free F1 + Linux. You will set this up after the app is created.
+6. Click through to **Review + Create** → **Create**
 
 ## 2. Configure Environment Variables
 
@@ -21,7 +22,7 @@ Go to your App Service → **Configuration** → **Application settings**, add:
 
 | Name | Value |
 |------|-------|
-| `DATABASE_URL` | `postgresql://postgres:Hydromesh%402025@db.zllbvvgufhhhktaxlpqp.supabase.co:5432/postgres` |
+| `DATABASE_URL` | `postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres` (from Supabase Dashboard → Settings → Database → Connection string → URI. Replace `@` with `%40` in the password.) |
 | `JWT_SECRET` | (generate a random 64-char string) |
 | `SUPABASE_URL` | `https://zllbvvgufhhhktaxlpqp.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | (from Supabase Dashboard → Settings → API → service_role key) |
