@@ -22,15 +22,36 @@ class _RouteScreenState extends State<RouteScreen> {
   bool _isCalculating = false;
   bool _routeFound = false;
   bool _destinationSet = false;
+  bool _argsLoaded = false;
+  bool _isEmergencyRoute = false;
   double _startLat = AppConfig.defaultLatitude;
   double _startLng = AppConfig.defaultLongitude;
   double _destLat = AppConfig.defaultLatitude + 0.018;
   double _destLng = AppConfig.defaultLongitude;
+  String? _destName;
+  String? _destDesc;
   String _distanceText = '--';
   String _timeText = '--';
   List<LatLng> _routePoints = [];
   List<Map<String, dynamic>> _steps = [];
   String? _routeError;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        _destLat = (args['destLat'] as num).toDouble();
+        _destLng = (args['destLng'] as num).toDouble();
+        _destName = args['destName'] as String?;
+        _destDesc = args['destDesc'] as String?;
+        _destinationSet = true;
+        _isEmergencyRoute = true;
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -52,12 +73,21 @@ class _RouteScreenState extends State<RouteScreen> {
         setState(() {
           _startLat = pos.latitude;
           _startLng = pos.longitude;
-          _destLat = pos.latitude + 0.018;
-          _destLng = pos.longitude;
+          if (!_destinationSet) {
+            _destLat = pos.latitude + 0.018;
+            _destLng = pos.longitude;
+          }
         });
         _mapController.move(LatLng(_startLat, _startLng), 13.5);
+        if (_destinationSet && _isEmergencyRoute) {
+          await _calculateSafeRoute();
+        }
       }
-    } catch (_) {}
+    } catch (_) {
+      if (_destinationSet && _isEmergencyRoute && mounted) {
+        await _calculateSafeRoute();
+      }
+    }
   }
 
   Future<void> _calculateSafeRoute() async {
@@ -75,97 +105,101 @@ class _RouteScreenState extends State<RouteScreen> {
         '?overview=full&geometries=geojson&steps=true',
       );
 
-      final response = await http.get(url, headers: {'User-Agent': 'Hydromesh/1.0'})
+      final response = await http
+          .get(url, headers: {'User-Agent': 'Hydromesh/1.0'})
           .timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['code'] == 'Ok' && (data['routes'] as List).isNotEmpty) {
-          final route = data['routes'][0];
-          final coords = (route['geometry']['coordinates'] as List)
-              .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
-              .toList();
-          final distanceM = (route['distance'] as num).toDouble();
-          final durationS = (route['duration'] as num).toDouble();
-
-          // Parse turn-by-turn steps from first leg
-          final rawSteps = (route['legs'][0]['steps'] as List?) ?? [];
-          final steps = rawSteps.map<Map<String, dynamic>>((s) {
-            final maneuver = s['maneuver'] as Map<String, dynamic>? ?? {};
-            final type = maneuver['type']?.toString() ?? '';
-            final modifier = maneuver['modifier']?.toString() ?? '';
-            final name = s['name']?.toString() ?? '';
-            final dist = ((s['distance'] as num?)?.toDouble() ?? 0);
-
-            IconData icon;
-            if (type == 'arrive') {
-              icon = Icons.location_on;
-            } else if (type == 'depart') {
-              icon = Icons.my_location;
-            } else if (modifier.contains('left')) {
-              icon = Icons.turn_left;
-            } else if (modifier.contains('right')) {
-              icon = Icons.turn_right;
-            } else if (modifier.contains('uturn')) {
-              icon = Icons.u_turn_left;
-            } else {
-              icon = Icons.straight;
-            }
-
-            String instruction;
-            if (type == 'arrive') {
-              instruction = 'Arrive at destination';
-            } else if (type == 'depart') {
-              instruction = 'Head ${modifier.isNotEmpty ? modifier : 'forward'}${name.isNotEmpty ? ' on $name' : ''}';
-            } else {
-              instruction = '${modifier.isNotEmpty ? '${modifier[0].toUpperCase()}${modifier.substring(1)}' : 'Continue'}${name.isNotEmpty ? ' onto $name' : ''}';
-            }
-
-            return {
-              'icon': icon,
-              'instruction': instruction,
-              'distance': dist >= 1000
-                  ? '${(dist / 1000).toStringAsFixed(1)} km'
-                  : '${dist.toInt()} m',
-            };
-          }).toList();
-
-          setState(() {
-            _routePoints = coords;
-            _distanceText = distanceM >= 1000
-                ? '${(distanceM / 1000).toStringAsFixed(1)} km'
-                : '${distanceM.toInt()} m';
-            _timeText = durationS >= 3600
-                ? '${(durationS / 3600).toStringAsFixed(1)} h'
-                : '${(durationS / 60).round()} min';
-            _steps = steps;
-            _routeFound = true;
-          });
-
-          // Fit map to route bounds
-          if (coords.isNotEmpty) {
-            final lats = coords.map((c) => c.latitude).toList();
-            final lngs = coords.map((c) => c.longitude).toList();
-            final bounds = LatLngBounds(
-              LatLng(lats.reduce((a, b) => a < b ? a : b) - 0.005, lngs.reduce((a, b) => a < b ? a : b) - 0.005),
-              LatLng(lats.reduce((a, b) => a > b ? a : b) + 0.005, lngs.reduce((a, b) => a > b ? a : b) + 0.005),
-            );
-            _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)));
-          }
-        } else {
-          setState(() => _routeError = 'No route found. Try a different destination.');
-          _routeFound = false;
-        }
-      } else {
-        setState(() => _routeError = 'Routing service unavailable (${response.statusCode})');
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['code'] != 'Ok' || (data['routes'] as List).isEmpty) {
+        setState(() {
+          _routeError = 'No route found. Try tapping a closer destination.';
+          _isCalculating = false;
+        });
+        return;
       }
-    } on Exception catch (_) {
+
+      final route = (data['routes'] as List).first as Map<String, dynamic>;
+      final distanceM = (route['distance'] as num).toDouble();
+      final durationS = (route['duration'] as num).toDouble();
+
+      final coords = (route['geometry']['coordinates'] as List)
+          .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+          .toList();
+
+      final legs = route['legs'] as List;
+      final rawSteps = legs.isNotEmpty ? (legs.first as Map)['steps'] as List : [];
+      final steps = rawSteps.map<Map<String, dynamic>>((s) {
+        final maneuver = s['maneuver'] as Map<String, dynamic>;
+        final type = maneuver['type'] as String? ?? '';
+        final modifier = maneuver['modifier'] as String? ?? '';
+        final name = s['name'] as String? ?? '';
+        final dist = (s['distance'] as num).toDouble();
+
+        IconData icon;
+        String instruction;
+
+        if (type == 'depart') {
+          icon = Icons.my_location;
+          instruction = 'Start on ${name.isNotEmpty ? name : 'the route'}';
+        } else if (type == 'arrive') {
+          icon = Icons.location_on;
+          instruction = _destName != null ? 'Arrive at $_destName' : 'Arrive at destination';
+        } else if (modifier.contains('left')) {
+          icon = modifier.contains('sharp') ? Icons.turn_sharp_left : Icons.turn_left;
+          instruction = 'Turn ${modifier.replaceAll('-', ' ')} onto ${name.isNotEmpty ? name : 'the road'}';
+        } else if (modifier.contains('right')) {
+          icon = modifier.contains('sharp') ? Icons.turn_sharp_right : Icons.turn_right;
+          instruction = 'Turn ${modifier.replaceAll('-', ' ')} onto ${name.isNotEmpty ? name : 'the road'}';
+        } else if (modifier == 'uturn') {
+          icon = Icons.u_turn_left;
+          instruction = 'Make a U-turn';
+        } else {
+          icon = Icons.straight;
+          instruction = name.isNotEmpty ? 'Continue on $name' : 'Continue straight';
+        }
+
+        final distStr = dist < 1000
+            ? '${dist.toStringAsFixed(0)} m'
+            : '${(dist / 1000).toStringAsFixed(1)} km';
+
+        return {'icon': icon, 'instruction': instruction, 'distance': distStr};
+      }).toList();
+
       if (!mounted) return;
-      setState(() => _routeError = 'Could not connect to routing service. Check your internet.');
-    } finally {
-      if (mounted) setState(() => _isCalculating = false);
+
+      setState(() {
+        _routePoints = coords;
+        _routeFound = true;
+        _isCalculating = false;
+        _distanceText = distanceM < 1000
+            ? '${distanceM.toStringAsFixed(0)} m'
+            : '${(distanceM / 1000).toStringAsFixed(1)} km';
+        _timeText = durationS < 3600
+            ? '${(durationS / 60).ceil()} min'
+            : '${(durationS / 3600).toStringAsFixed(1)} h';
+        _steps = steps;
+      });
+
+      if (coords.length >= 2) {
+        final minLat = coords.map((c) => c.latitude).reduce((a, b) => a < b ? a : b);
+        final maxLat = coords.map((c) => c.latitude).reduce((a, b) => a > b ? a : b);
+        final minLng = coords.map((c) => c.longitude).reduce((a, b) => a < b ? a : b);
+        final maxLng = coords.map((c) => c.longitude).reduce((a, b) => a > b ? a : b);
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
+            padding: const EdgeInsets.all(48),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = 'Connection error. Check your network.';
+        _isCalculating = false;
+      });
     }
   }
 
@@ -181,13 +215,14 @@ class _RouteScreenState extends State<RouteScreen> {
               initialCenter: LatLng(_startLat, _startLng),
               initialZoom: 13.5,
               onTap: (tapPosition, point) {
-                setState(() {
-                  _destLat = point.latitude;
-                  _destLng = point.longitude;
-                  _destinationSet = true;
-                  _routeFound = false;
-                  _steps = [];
-                });
+                if (!_isEmergencyRoute) {
+                  setState(() {
+                    _destLat = point.latitude;
+                    _destLng = point.longitude;
+                    _destinationSet = true;
+                    _destName = null;
+                  });
+                }
               },
             ),
             children: [
@@ -196,209 +231,248 @@ class _RouteScreenState extends State<RouteScreen> {
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.hydromesh.app',
               ),
-              if (_routeFound && _routePoints.isNotEmpty)
+              if (_routePoints.isNotEmpty)
                 PolylineLayer(
                   polylines: [
                     Polyline(
                       points: _routePoints,
-                      color: AppTheme.safeColor,
+                      color: _isEmergencyRoute ? AppTheme.dangerColor : AppTheme.safeColor,
                       strokeWidth: 5.0,
                     ),
                   ],
-                ).animate().fadeIn(duration: 800.ms),
+                ),
               MarkerLayer(
                 markers: [
                   Marker(
                     point: LatLng(_startLat, _startLng),
-                    width: 20, height: 20,
-                    child: const Icon(Icons.circle, color: AppTheme.primaryColor, size: 20),
-                  ),
-                  Marker(
-                    point: LatLng(_destLat, _destLng),
-                    width: 24, height: 24,
-                    child: Icon(
-                      Icons.location_on,
-                      color: _destinationSet ? AppTheme.warningColor : AppTheme.safeColor,
-                      size: 24,
+                    width: 40,
+                    height: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        border: Border.all(color: AppTheme.primaryColor, width: 2),
+                      ),
+                      child: const Icon(Icons.my_location, color: AppTheme.primaryColor, size: 20),
                     ),
                   ),
+                  if (_destinationSet)
+                    Marker(
+                      point: LatLng(_destLat, _destLng),
+                      width: 40,
+                      height: 40,
+                      child: Icon(
+                        _isEmergencyRoute ? Icons.health_and_safety : Icons.location_on,
+                        color: _isEmergencyRoute ? AppTheme.dangerColor : AppTheme.warningColor,
+                        size: 36,
+                      ),
+                    ),
                 ],
-              ).animate().fadeIn(duration: 500.ms),
+              ),
             ],
           ),
 
-          // Top bar
+          // Back button
           Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
+            top: MediaQuery.of(context).padding.top + 8,
             left: 16,
-            right: 16,
-            child: Row(
-              children: [
-                Semantics(
-                  label: 'Go back',
-                  button: true,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const GlassCard(
-                      padding: EdgeInsets.all(12),
-                      borderRadius: 16,
-                      child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: GlassCard(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    borderRadius: 30,
-                    child: Text(
-                      'Safe Evacuation Routes',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ).animate().slideY(begin: -0.2).fadeIn(),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: GlassCard(
+                padding: const EdgeInsets.all(10),
+                child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+              ),
+            ),
           ),
 
-          // Bottom panel — route info + steps
+          // Emergency Route Banner
+          if (_isEmergencyRoute)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 72,
+              right: 16,
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.health_and_safety, color: AppTheme.dangerColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'EVACUATION ROUTE',
+                            style: TextStyle(
+                              color: AppTheme.dangerColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          if (_destName != null)
+                            Text(
+                              _destName!,
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.3),
+            ),
+
+          // Hint when not emergency
+          if (!_isEmergencyRoute && !_destinationSet)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: const Text('Tap on the map to set destination', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                ),
+              ).animate().fadeIn(duration: 400.ms),
+            ),
+
+          // Bottom draggable panel
           DraggableScrollableSheet(
-            initialChildSize: _routeFound ? 0.4 : 0.22,
-            minChildSize: 0.18,
-            maxChildSize: 0.7,
+            initialChildSize: 0.28,
+            minChildSize: 0.15,
+            maxChildSize: 0.65,
             builder: (context, scrollController) {
-              return GlassCard(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                borderRadius: 30,
-                child: SingleChildScrollView(
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 20)],
+                ),
+                child: ListView(
                   controller: scrollController,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40, height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(2)),
                       ),
-
-                      // Origin → Destination
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.my_location, color: AppTheme.primaryColor),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _statChip(Icons.directions_walk, _timeText, 'Walk Time'),
+                        _statChip(Icons.straighten, _distanceText, 'Distance'),
+                        _statChip(
+                          Icons.shield,
+                          _isEmergencyRoute ? 'Evac' : 'Safe',
+                          'Status',
+                          color: _isEmergencyRoute ? AppTheme.dangerColor : AppTheme.safeColor,
                         ),
-                        const SizedBox(width: 16),
-                        const Expanded(child: Text('Current Location', style: TextStyle(fontWeight: FontWeight.w600))),
-                      ]),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 4, bottom: 4),
-                        child: Container(width: 2, height: 20, color: AppTheme.surfaceLight),
-                      ),
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.location_city, color: AppTheme.safeColor),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            _destinationSet
-                                ? 'Custom (${_destLat.toStringAsFixed(4)}, ${_destLng.toStringAsFixed(4)})'
-                                : 'Nearest Safe Zone — tap map to set',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 20),
-
-                      if (_routeError != null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppTheme.dangerColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.dangerColor.withOpacity(0.3)),
-                          ),
-                          child: Text(_routeError!, style: const TextStyle(color: AppTheme.dangerColor, fontSize: 13)),
-                        )
-                      else if (_routeFound) ...[
-                        // Stats row
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.safeColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.safeColor.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (_isCalculating)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Column(
                             children: [
-                              _RouteStat(label: 'Walking Time', value: _timeText),
-                              _RouteStat(label: 'Distance', value: _distanceText),
-                              const _RouteStat(label: 'Status', value: 'Safe', color: AppTheme.safeColor),
+                              CircularProgressIndicator(color: AppTheme.primaryColor),
+                              SizedBox(height: 12),
+                              Text('Calculating route...', style: TextStyle(color: AppTheme.textSecondary)),
                             ],
                           ),
-                        ).animate().fadeIn().slideY(begin: 0.2),
-
-                        if (_steps.isNotEmpty) ...[
-                          const SizedBox(height: 20),
-                          const Text('Turn-by-Turn Directions', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textSecondary)),
-                          const SizedBox(height: 12),
-                          ..._steps.asMap().entries.map((entry) {
-                            final i = entry.key;
-                            final step = entry.value;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 36, height: 36,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.surfaceLight,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(step['icon'] as IconData, color: AppTheme.primaryColor, size: 18),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      step['instruction'] as String,
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                  Text(
-                                    step['distance'] as String,
-                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                                  ),
-                                ],
-                              ).animate().fadeIn(delay: (i * 40).ms),
-                            );
-                          }),
-                        ],
-                      ] else
-                        Semantics(
-                          label: 'Find safe evacuation route',
+                        ),
+                      )
+                    else if (_routeError != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Column(
+                          children: [
+                            Text(_routeError!, style: const TextStyle(color: AppTheme.dangerColor), textAlign: TextAlign.center),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _calculateSafeRoute,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (!_destinationSet)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('Tap the map to choose a destination', style: TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+                      )
+                    else if (!_routeFound)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Semantics(
+                          label: 'Calculate safe route',
                           button: true,
                           child: NeonButton(
-                            text: 'FIND SAFE ROUTE',
+                            label: 'Calculate Route',
                             icon: Icons.route,
-                            isLoading: _isCalculating,
+                            color: _isEmergencyRoute ? AppTheme.dangerColor : AppTheme.safeColor,
                             onPressed: _calculateSafeRoute,
                           ),
                         ),
+                      )
+                    else ...[
+                      if (_destName != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Icon(Icons.health_and_safety, color: AppTheme.dangerColor, size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_destName!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    if (_destDesc != null)
+                                      Text(_destDesc!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ..._steps.map((step) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: (_isEmergencyRoute ? AppTheme.dangerColor : AppTheme.safeColor).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(step['icon'] as IconData, color: _isEmergencyRoute ? AppTheme.dangerColor : AppTheme.safeColor, size: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(step['instruction'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                      Text(step['distance'] as String, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
                     ],
-                  ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
               );
             },
@@ -407,22 +481,15 @@ class _RouteScreenState extends State<RouteScreen> {
       ),
     );
   }
-}
 
-class _RouteStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? color;
-
-  const _RouteStat({required this.label, required this.value, this.color});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _statChip(IconData icon, String value, String label, {Color? color}) {
+    final c = color ?? AppTheme.primaryColor;
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+        Icon(icon, color: c, size: 22),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color ?? Colors.white)),
+        Text(value, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
       ],
     );
   }
