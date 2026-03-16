@@ -35,7 +35,10 @@ jobs:
 
       - name: Verify server starts
         run: |
-          JWT_SECRET=test DATABASE_URL=postgresql://test:test@localhost:5432/test PORT=4000 \
+          SUPABASE_URL=https://test.supabase.co \
+          SUPABASE_SERVICE_KEY=eyJtest \
+          JWT_SECRET=test_secret_32_chars_min_length_xx \
+          PORT=4000 \
           node -e "
             const { app } = require('./src/index.js');
             setTimeout(() => { console.log('✅ Server starts OK'); process.exit(0); }, 2000);
