@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
@@ -27,8 +28,10 @@ class ApiService {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}$endpoint'),
         headers: _headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       return _handleResponse(response);
+    } on TimeoutException {
+      return {'success': false, 'error': 'Request timed out — server may be waking up, try again'};
     } catch (e) {
       return {'success': false, 'error': 'Network error: ${e.runtimeType}'};
     }
@@ -44,8 +47,10 @@ class ApiService {
         Uri.parse('${AppConfig.apiBaseUrl}$endpoint'),
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 20));
       return _handleResponse(response);
+    } on TimeoutException {
+      return {'success': false, 'error': 'Request timed out — server may be waking up, try again'};
     } catch (e) {
       return {'success': false, 'error': 'Network error: ${e.runtimeType}'};
     }

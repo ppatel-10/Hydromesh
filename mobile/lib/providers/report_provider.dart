@@ -51,8 +51,11 @@ class ReportProvider with ChangeNotifier {
 
   void _initSocket() {
     _socket = IO.io(AppConfig.socketUrl, <String, dynamic>{
-      'transports': ['websocket'],
+      'transports': ['websocket', 'polling'],
       'autoConnect': true,
+      'reconnection': true,
+      'reconnectionAttempts': 5,
+      'reconnectionDelay': 2000,
     });
 
     _socket?.on('new_report', (data) {

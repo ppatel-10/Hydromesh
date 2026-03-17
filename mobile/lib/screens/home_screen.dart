@@ -28,6 +28,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _isSosLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReportProvider>().fetchReports();
+      }
+    });
+  }
+
   static const Map<String, List<double>> _cityDefaults = {
     'london': [51.5074, -0.1278],
     'mumbai': [19.0760, 72.8777],
@@ -585,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
           3,
           (i) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: ShimmerSkeleton(height: 80, borderRadius: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 80, borderRadius: 16),
           ),
         ),
       );
