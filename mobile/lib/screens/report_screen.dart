@@ -24,6 +24,8 @@ class _ReportScreenState extends State<ReportScreen> {
   double? _currentLat;
   double? _currentLng;
   bool _isLocating = false;
+  bool _submitted = false;
+  Map<String, dynamic>? _submittedData;
 
   @override
   void initState() {
@@ -92,13 +94,15 @@ class _ReportScreenState extends State<ReportScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Report submitted successfully!'),
-          backgroundColor: AppTheme.safeColor,
-        ),
-      );
-      Navigator.pop(context);
+      setState(() {
+        _submitted = true;
+        _submittedData = {
+          'level': _selectedLevel,
+          'description': _descriptionController.text.trim(),
+          'lat': _currentLat,
+          'lng': _currentLng,
+        };
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -112,6 +116,8 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = Provider.of<ReportProvider>(context).isLoading;
+
+    if (_submitted) return _buildSuccessState(context);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -213,4 +219,147 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
     );
   }
-}
+
+  Widget _buildSuccessState(BuildContext context) {
+    final level = _submittedData?['level'] as String? ?? _selectedLevel;
+    final desc = _submittedData?['description'] as String?;
+    final lat = _submittedData?['lat'] as double?;
+    final lng = _submittedData?['lng'] as double?;
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.safeColor.withValues(alpha: 0.12),
+                  border: Border.all(color: AppTheme.safeColor, width: 2),
+                ),
+                child: const Icon(Icons.check_rounded,
+                    size: 50, color: AppTheme.safeColor),
+              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                'Report Submitted!',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 150.ms),
+
+              const SizedBox(height: 8),
+
+              const Text(
+                'Thank you for helping your community stay safe.',
+                style:
+                    TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 250.ms),
+
+              const SizedBox(height: 28),
+
+              GlassCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _summaryRow(
+                      Icons.water_drop_outlined,
+                      'Water Level',
+                      '${level[0].toUpperCase()}${level.substring(1)}',
+                    ),
+                    const Divider(color: AppTheme.surfaceLight, height: 20),
+                    if (desc != null && desc.isNotEmpty) ...[
+                      _summaryRow(
+                          Icons.notes_rounded, 'Description', desc),
+                      const Divider(color: AppTheme.surfaceLight, height: 20),
+                    ],
+                    _summaryRow(
+                      Icons.location_on_outlined,
+                      'Location',
+                      lat != null
+                          ? '${lat.toStringAsFixed(4)}, ${lng!.toStringAsFixed(4)}'
+                          : 'Default location used',
+                    ),
+                  ],
+                ),
+              ).animate().slideY(begin: 0.1).fadeIn(delay: 350.ms),
+
+              const SizedBox(height: 24),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: const Text('View on Map'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/map');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            AppTheme.primaryColor.withValues(alpha: 0.15),
+                        foregroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Done',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(delay: 500.ms),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppTheme.primaryColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 11)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }

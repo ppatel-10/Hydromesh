@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../providers/auth_provider.dart';
 import '../providers/emergency_provider.dart';
 import '../providers/simulation_provider.dart';
+import '../providers/report_provider.dart';
 import '../config/app_config.dart';
 import '../config/theme.dart';
 import '../widgets/common/glass_card.dart';
@@ -99,7 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final userName = auth.user?.name ?? 'Citizen';
+    final role = auth.user?.role ?? 'citizen';
     final sim = context.watch<SimulationProvider>();
+    final reportProvider = context.watch<ReportProvider>();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -110,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
-                  _buildAppBar(context, userName, sim),
+                  _buildAppBar(context, userName, sim, role, reportProvider),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                     sliver: SliverToBoxAdapter(
@@ -127,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 32),
                           _buildSectionHeader('Recent Activity'),
                           const SizedBox(height: 16),
-                          _buildActivityList(),
+                          _buildActivityList(reportProvider),
                           const SizedBox(height: 120),
                         ],
                       ),
@@ -175,63 +178,90 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSosButton(BuildContext context, SimulationProvider sim) {
     final isSimActive = sim.isActive;
 
-    Widget button = Semantics(
-      label: isSimActive
-          ? 'Emergency SOS — routes to nearest safe point for active ${sim.activeSimName} simulation'
-          : 'Emergency SOS — send distress signal',
-      button: true,
-      child: GestureDetector(
-        onTap: _isSosLoading ? null : () => _handleSos(context),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.dangerColor,
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.dangerColor.withOpacity(isSimActive ? 0.75 : 0.4),
-                blurRadius: isSimActive ? 22 : 10,
-                spreadRadius: isSimActive ? 4 : 1,
+    return SizedBox(
+      width: 92,
+      height: 92,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Radar ping rings
+          for (int i = 0; i < 3; i++)
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.dangerColor
+                      .withValues(alpha: isSimActive ? 0.55 : 0.3),
+                  width: 1.5,
+                ),
               ),
-            ],
-          ),
-          child: _isSosLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(18),
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isSimActive ? Icons.directions_run : Icons.sos,
-                      color: Colors.white,
-                      size: isSimActive ? 20 : 24,
-                    ),
-                    Text(
-                      'SOS',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        height: 1.2,
-                      ),
+            )
+                .animate(onPlay: (c) => c.repeat(), delay: (i * 380).ms)
+                .scaleXY(
+                    begin: 0.65,
+                    end: 2.1,
+                    duration: 1400.ms,
+                    curve: Curves.easeOut)
+                .fadeOut(begin: 0.7, duration: 1400.ms),
+
+          // Core button
+          Semantics(
+            label: isSimActive
+                ? 'Emergency SOS — routes to nearest safe point for active ${sim.activeSimName} simulation'
+                : 'Emergency SOS — send distress signal',
+            button: true,
+            child: GestureDetector(
+              onTap: _isSosLoading ? null : () => _handleSos(context),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.dangerColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.dangerColor
+                          .withValues(alpha: isSimActive ? 0.75 : 0.4),
+                      blurRadius: isSimActive ? 22 : 10,
+                      spreadRadius: isSimActive ? 4 : 1,
                     ),
                   ],
                 ),
-        ),
+                child: _isSosLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(18),
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isSimActive ? Icons.directions_run : Icons.sos,
+                            color: Colors.white,
+                            size: isSimActive ? 20 : 24,
+                          ),
+                          const Text(
+                            'SOS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
-
-    if (isSimActive) {
-      return button
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .scaleXY(begin: 1.0, end: 1.10, duration: 700.ms, curve: Curves.easeInOut);
-    }
-    return button;
   }
 
   Widget _buildSimulationBanner(SimulationProvider sim) {
@@ -281,7 +311,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, String name, SimulationProvider sim) {
+  Widget _buildAppBar(BuildContext context, String name,
+      SimulationProvider sim, String role, ReportProvider reportProvider) {
     final hour = DateTime.now().hour;
     String greeting = 'Good evening';
     if (hour < 12) greeting = 'Good morning';
@@ -303,11 +334,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const ProgressRing(
-                    progress: 0.85,
+                  ProgressRing(
+                    progress: reportProvider.reports.isNotEmpty
+                        ? (reportProvider.reports.length / 20.0).clamp(0.1, 1.0)
+                        : 0.1,
                     size: 32,
                     strokeWidth: 3,
-                    centerChild: Text('85', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    centerChild: Text(
+                      '${reportProvider.reports.length}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Flexible(
@@ -345,34 +381,35 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/simulation'),
-                  child: Stack(
-                    children: [
-                      const CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppTheme.surfaceLight,
-                        child: Icon(Icons.terminal, size: 16, color: AppTheme.dangerColor),
-                      ),
-                      if (sim.isActive)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppTheme.dangerColor,
-                              border: Border.all(color: AppTheme.background, width: 1.5),
-                            ),
-                          ).animate(onPlay: (c) => c.repeat(reverse: true))
-                              .scaleXY(end: 1.3, duration: 600.ms),
+                if (role != 'citizen')
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/simulation'),
+                    child: Stack(
+                      children: [
+                        const CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppTheme.surfaceLight,
+                          child: Icon(Icons.terminal, size: 16, color: AppTheme.dangerColor),
                         ),
-                    ],
+                        if (sim.isActive)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.dangerColor,
+                                border: Border.all(color: AppTheme.background, width: 1.5),
+                              ),
+                            ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                .scaleXY(end: 1.3, duration: 600.ms),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                if (role != 'citizen') const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () {
                     Provider.of<AuthProvider>(context, listen: false).logout();
@@ -451,52 +488,133 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(delay: delay.ms, duration: 400.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildActivityList() {
+  Widget _buildActivityList(ReportProvider reportProvider) {
+    // Loading shimmer
+    if (reportProvider.isLoading && reportProvider.reports.isEmpty) {
+      return Column(
+        children: List.generate(
+          3,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ShimmerSkeleton(height: 80, borderRadius: 16),
+          ),
+        ),
+      );
+    }
+
+    final reports = reportProvider.reports;
+
+    // Empty state
+    if (reports.isEmpty) {
+      return GlassCard(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.water_drop_outlined,
+                size: 48,
+                color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+            const SizedBox(height: 16),
+            const Text(
+              'No reports yet in your area',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Be the first to flag a flood condition near you.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    AppTheme.primaryColor.withValues(alpha: 0.15),
+                foregroundColor: AppTheme.primaryColor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+              label: const Text('File a Report'),
+              onPressed: () => Navigator.pushNamed(context, '/report'),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05);
+    }
+
+    final recent = reports.take(5).toList();
     return Column(
-      children: List.generate(3, (index) {
+      children: List.generate(recent.length, (i) {
+        final r = recent[i];
+        final level = r.waterLevel;
+        final isDanger =
+            level == 'knee' || level == 'waist' || level == 'chest';
+        final levelColor =
+            isDanger ? AppTheme.dangerColor : AppTheme.warningColor;
+        final levelIcon =
+            isDanger ? Icons.warning_rounded : Icons.water_drop_outlined;
+        final timeAgo = r.createdAt != null
+            ? _timeAgo(r.createdAt!)
+            : 'Just now';
+
         return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: Dismissible(
-            key: Key('activity_$index'),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                color: AppTheme.dangerColor.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.delete_outline, color: Colors.white),
-            ),
-            onDismissed: (_) {},
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.check_circle_outline, color: AppTheme.safeColor),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: levelColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: levelColor.withValues(alpha: 0.3)),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Report Verified', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                        SizedBox(height: 4),
-                        Text('Downtown river overflow alert', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                      ],
-                    ),
+                  child: Icon(levelIcon, color: levelColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${level[0].toUpperCase()}${level.substring(1)}-level flood',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        r.description?.isNotEmpty == true
+                            ? r.description!
+                            : '${r.latitude.toStringAsFixed(3)}, ${r.longitude.toStringAsFixed(3)}',
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  const Text('2h ago', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                ],
-              ),
+                ),
+                Text(timeAgo,
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 11)),
+              ],
             ),
-          ).animate().fadeIn(delay: (400 + (index * 100)).ms).slideX(begin: 0.05),
-        );
+          ),
+        ).animate().fadeIn(delay: (i * 80).ms, duration: 350.ms).slideX(begin: 0.04);
       }),
     );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inMinutes < 1) return 'Just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    return '${d.inDays}d ago';
   }
 }

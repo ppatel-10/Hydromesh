@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:geolocator/geolocator.dart';
@@ -52,6 +53,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       longitude: lng,
       description: 'Emergency assistance needed',
     );
+    if (mounted) HapticFeedback.heavyImpact();
   }
 
   @override
@@ -152,50 +154,118 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                   ),
                 ).animate().slideY(begin: 0.1).fadeIn(delay: 200.ms),
                   ] else ...[
-                    // Success State
-                    const Icon(Icons.check_circle_outline, size: 100, color: AppTheme.safeColor)
-                        .animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
+                    // ── Success State ───────────────────────────────
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.safeColor.withValues(alpha: 0.12),
+                        border: Border.all(color: AppTheme.safeColor, width: 2),
+                      ),
+                      child: const Icon(Icons.check_rounded,
+                          size: 52, color: AppTheme.safeColor),
+                    ).animate().scale(
+                        duration: 500.ms, curve: Curves.easeOutBack),
+
                     const SizedBox(height: 24),
+
                     const Text(
                       'Help is on the way',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.safeColor),
+                      style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.safeColor),
                     ).animate().fadeIn(delay: 200.ms),
-                    const SizedBox(height: 16),
+
+                    const SizedBox(height: 12),
+
                     const Text(
-                      'Your request has been broadcasted to responders within 10km. Please stay at your current location if it is safe to do so.',
+                      'Stay calm. Your exact location has been shared with responders within 10 km.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: AppTheme.textSecondary, height: 1.5),
-                    ).animate().fadeIn(delay: 400.ms),
-                    const SizedBox(height: 48),
+                      style: TextStyle(
+                          fontSize: 15,
+                          color: AppTheme.textSecondary,
+                          height: 1.6),
+                    ).animate().fadeIn(delay: 350.ms),
+
+                    const SizedBox(height: 32),
+
+                    // What to do checklist
                     GlassCard(
                       padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('While you wait',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
+                          const SizedBox(height: 16),
+                          _buildCheckItem(
+                              'Stay at your current location if it is safe'),
+                          _buildCheckItem(
+                              'Keep your phone charged and nearby'),
+                          _buildCheckItem(
+                              'Move to higher ground only if water rises'),
+                          _buildCheckItem(
+                              'Signal your location with a flashlight or noise'),
+                        ],
+                      ),
+                    ).animate().slideY(begin: 0.15).fadeIn(delay: 400.ms),
+
+                    const SizedBox(height: 16),
+
+                    GlassCard(
+                      padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          const CircularProgressIndicator(color: AppTheme.primaryColor),
-                          const SizedBox(width: 20),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.dangerColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.priority_high_rounded,
+                                color: AppTheme.dangerColor, size: 20),
+                          ),
+                          const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Waiting for responder assignment...', 
-                                    style: TextStyle(fontWeight: FontWeight.w600)),
-                                SizedBox(height: 4),
-                                Text('Priority: HIGH', 
-                                    style: TextStyle(color: AppTheme.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text('Connecting to responders…',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14)),
+                                SizedBox(height: 3),
+                                Text('Avg response time · 6–10 min',
+                                    style: TextStyle(
+                                        color: AppTheme.dangerColor,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppTheme.primaryColor),
+                          ),
                         ],
                       ),
-                    ).animate().slideY(begin: 0.2).fadeIn(delay: 600.ms),
-                    const SizedBox(height: 32),
+                    ).animate().slideY(begin: 0.15).fadeIn(delay: 550.ms),
+
+                    const SizedBox(height: 28),
+
                     NeonButton(
                       text: 'CANCEL REQUEST',
-                      icon: Icons.cancel,
+                      icon: Icons.cancel_outlined,
                       neonColor: Colors.grey.shade700,
                       onPressed: () => provider.resetRequest(),
-                    ).animate().fadeIn(delay: 800.ms),
+                    ).animate().fadeIn(delay: 700.ms),
                   ],
                 ],
               ),
@@ -203,6 +273,33 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCheckItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.safeColor.withValues(alpha: 0.15),
+            ),
+            child: const Icon(Icons.check, color: AppTheme.safeColor, size: 12),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+          ),
+        ],
+      ),
     );
   }
 

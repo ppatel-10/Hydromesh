@@ -16,35 +16,71 @@ class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return _fade(const SplashScreen());
       case '/accessibility':
-        return MaterialPageRoute(builder: (_) => const AccessibilityScreen());
+        return _slideUp(const AccessibilityScreen());
       case '/login':
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return _fade(const LoginScreen());
       case '/home':
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        return _fade(const HomeScreen());
       case '/map':
-        return MaterialPageRoute(builder: (_) => const MapScreen());
+        return _fade(const MapScreen());
       case '/report':
-        return MaterialPageRoute(builder: (_) => const ReportScreen());
+        return _slideUp(const ReportScreen());
       case '/route':
-        return MaterialPageRoute(builder: (_) => const RouteScreen());
+        return _slideUp(const RouteScreen());
       case '/emergency':
-        return MaterialPageRoute(builder: (_) => const EmergencyScreen());
+        return _slideUp(const EmergencyScreen());
       case '/simulation':
-        return MaterialPageRoute(builder: (_) => const SimulationScreen());
+        return _slideUp(const SimulationScreen());
       case '/buttons':
-        return MaterialPageRoute(builder: (_) => const ButtonShowcaseScreen());
+        return _fade(const ButtonShowcaseScreen());
       case '/alerts':
-        return MaterialPageRoute(builder: (_) => const AlertsScreen());
+        return _fade(const AlertsScreen());
       case '/profile':
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+        return _slideUp(const ProfileScreen());
       default:
-        return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            body: Center(child: Text('Route not found: ${settings.name}')),
+        return _fade(Scaffold(
+          body: Center(child: Text('Route not found: ${settings.name}')),
+        ));
+    }
+  }
+
+  /// Fade transition — peer-level navigation (home ↔ map/alerts/profile)
+  static Route<T> _fade<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      settings: RouteSettings(name: page.runtimeType.toString()),
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (_, animation, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+        child: child,
+      ),
+    );
+  }
+
+  /// Slide-up transition — detail / action screens
+  static Route<T> _slideUp<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      settings: RouteSettings(name: page.runtimeType.toString()),
+      transitionDuration: const Duration(milliseconds: 340),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (_, animation, __, child) {
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(
+            opacity: curved,
+            child: child,
           ),
         );
-    }
+      },
+    );
   }
 }
